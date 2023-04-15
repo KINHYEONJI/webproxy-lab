@@ -61,15 +61,16 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor
     clienterror(fd, method, "501", "Not implemented", "Tiny does not implement this method");
     return;
   }
+
   read_requesthdrs(&rio); // read request header
 
-  if (stat(filename, &sbuf) < 0) // file의 상태(state)를 가져와 파일이 존재하지 않을 경우, error 호출
+  is_static = parse_uri(uri, filename, cgiargs); // parse_uri를 통해 요청 uri를 분석해 해당 file이 정적인지 동적인지 파악
+  
+  if (stat(filename, &sbuf) < 0)                 // file의 상태(state)를 가져와 파일이 존재하지 않을 경우, error 호출
   {
     clienterror(fd, filename, "404", "Not found", "Tiny couldn't find this file");
     return;
   }
-
-  is_static = parse_uri(uri, filename, cgiargs); // parse_uri를 통해 요청 uri를 분석해 해당 file이 정적인지 동적인지 파악
 
   if (is_static) // 정적 file일 경우
   {
