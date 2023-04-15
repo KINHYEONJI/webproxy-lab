@@ -183,3 +183,17 @@ void serve_static(int fd, char *filename, int filesize)
   Rio_writen(fd, srcp, filesize);
   Munmap(srcp, filesize);
 }
+
+void get_filetype(char *filename, char *filetype)
+{
+  if (strstr(filename, ".html"))
+    strcpy(filetype, "text/html"); //
+  else if (strtstr(filename, ".gif"))
+    strcpy(filetype, "image/gif");
+  else if (strtstr(filename, ".png"))
+    strcpy(filetype, "image/png");
+  else if (strtstr(filename, ".jpg"))
+    strcpy(filetype, "image/jpeg");
+  else
+    strcpy(filetype, "text/plain");
+}
