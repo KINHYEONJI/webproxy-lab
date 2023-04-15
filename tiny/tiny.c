@@ -41,3 +41,52 @@ int main(int argc, char **argv) // argument count(인자 개수), argument vecto
     Close(connfd); // client와의 연결을 종료, socket file descriptor(connfd) 닫음.
   }
 }
+
+void doit(int fd) // fd는 client와 연결된 socekt file descriptor
+{
+  int is_static;
+  struct stat sbuf;
+  char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
+  char filename[MAXLINE], cgiargs[MAXLINE];
+  rio_t rio; // 안전하고 효율적인 I/O 작업을 수행하기 위해 사용하는 구조체, file discriptor에서 data를 읽는데 사용, buffering(I/O 작업시 data를 buffer에 저장해 두는 것)된 I/O를 지원
+
+  Rio_readinitb(&rio, fd);           // rio 초기화
+  Rio_readlineb(&rio, buf, MAXLINE); // buf(함수가 rio에서 읽은 data를 저장할 buffer), MAXLINE(buf에 저장될 수 있는 최대 줄 수)
+  printf("Request headers:\n");
+  printf("%s", buf);
+  sscanf(buf, "%s %s %s", method, uri, version); // buf에서 http method, uri, version 정보를 추출
+
+  if (strcasecmp(method, "GET")) // GET method가 아닌 경우, error 호출 (구현하고 있는 tiny web server가 GET요청에만 응답할 수 있도록 구현되어있음)
+  {
+    clienterror(fd, method, "501", "Not implemented", "Tiny does not implement this method");
+    return;
+  }
+  read_requesthdrs(&rio); // read request header
+
+  if (stat(filename, &sbuf) < 0) // file의 상태(state)를 가져와 파일이 존재하지 않을 경우, error 호출
+  {
+    clienterror(fd, filename, "404", "Not found", "Tiny couldn't find this file");
+    return;
+  }
+
+  is_static = parse_uri(uri, filename, cgiargs); // parse_uri를 통해 요청 uri를 분석해 해당 file이 정적인지 동적인지 파악
+
+  if (is_static) // 정적 file일 경우
+  {
+    if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) // 일반 file인지 확인, 현재 user가 해당 file을 읽을 권한이 있는지 확인
+    {
+      clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't read the file");
+      return;
+    }
+    serve_static(fd, filename, sbuf.st_size); // 바로 client에게 전송
+  }
+  else // 동적 file일 경우
+  {
+    if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode))
+    {
+      clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't run the CGI program");
+      return;
+    }
+    serve_dynamic(fd, filename, cgiargs); // CGI program(server측 web programming 방식 중 하나)을 실행하여 결과를 생성해 client에게 전송
+  }
+}
