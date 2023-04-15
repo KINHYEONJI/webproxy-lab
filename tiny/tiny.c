@@ -158,3 +158,28 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
     return 0;
   }
 }
+
+void serve_static(int fd, char *filename, int filesize)
+{
+  int srcfd;
+  char *srcp, filetype[MAXLINE], buf[MAXBUF];
+
+  get_filetype(filename, filetype); // file type (ex. HTML, CSS, JAVASCRIPT, JPG, PNG, txt 등)
+
+  // buf에 response header 생성
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");
+  sprintf(buf, "%sServer: Tiny Web Server\r\n", buf);
+  sprintf(buf, "%sConnection: close\r\n", buf);
+  sprintf(buf, "%sContent-length: %d\r\n", buf, filesize);
+  sprintf(buf, "%sContent-type: %s\r\n\r\n", buf, filetype);
+  Rio_writen(fd, buf, strlen(buf)); // client에게 response header 전송
+  printf("Response headers:\n");    // server측에서도 header 정보를 출력
+  printf("%s", buf);
+
+  // file의 내용을 memory에 mapping하여 clinet에게 전송
+  srcfd = Open(filename, O_RDONLY, 0);
+  srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  Close(srcfd);
+  Rio_writen(fd, srcp, filesize);
+  Munmap(srcp, filesize);
+}
