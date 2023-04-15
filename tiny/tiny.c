@@ -65,8 +65,8 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor
   read_requesthdrs(&rio); // read request header
 
   is_static = parse_uri(uri, filename, cgiargs); // parse_uri를 통해 요청 uri를 분석해 해당 file이 정적인지 동적인지 파악
-  
-  if (stat(filename, &sbuf) < 0)                 // file의 상태(state)를 가져와 파일이 존재하지 않을 경우, error 호출
+
+  if (stat(filename, &sbuf) < 0) // file의 상태(state)를 가져와 파일이 존재하지 않을 경우, error 호출
   {
     clienterror(fd, filename, "404", "Not found", "Tiny couldn't find this file");
     return;
@@ -118,6 +118,8 @@ void read_requesthdrs(rio_t *rp)
   char buf[MAXLINE];
 
   Rio_readlineb(rp, buf, MAXLINE);
+
+  // printf("%s", buf); <- while문 없이 통째로 출력해도 됨
   while (strcmp(buf, "\r\n")) // \r\n은 header의 끝
   {
     Rio_readlineb(rp, buf, MAXLINE);
