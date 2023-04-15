@@ -197,3 +197,21 @@ void get_filetype(char *filename, char *filetype)
   else
     strcpy(filetype, "text/plain");
 }
+
+void serve_dynamic(int fd, char *filename, char *cgiargs)
+{
+  char buf[MAXLINE], *emptylist[] = {NULL};
+
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");         // HTTP response message 상태코드를 설정
+  Rio_writen(fd, buf, strlen(buf));            // client에게 전달
+  sprintf(buf, "Server: Tiny Web Server\r\n"); // server의 추가정보 추가
+  Rio_writen(fd, buf, strlen(buf));            // clinet에게 전달
+
+  if (Fork() == 0) // 자식 process만듦
+  {
+    setenv("QUERY_STRING", cgiargs, 1);   // CGI script에서 사용할 수 있는 QUERY_STRING 환경변수 설정
+    Dup2(fd, STDOUT_FILENO);              // 자식 process의 표준 출력을 client socket fd로 재지정
+    Execve(filename, emptylist, environ); // CGI script file 실행
+  }
+  Wait(NULL); // 자식 process가 종료될 때까지 기다림
+}
