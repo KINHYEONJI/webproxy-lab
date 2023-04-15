@@ -97,10 +97,7 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 
   // body에 HTML 형식의 error page 생성
   sprintf(body, "<html><title>Tiny Error</title>");
-  sprintf(body, "%s<body bgcolor="
-                "ffffff"
-                ">\r\n",
-          body);
+  sprintf(body, "%s<body bgcolor='ffffff'>\r\n", body);
   sprintf(body, "%s%s: %s\r\n", body, errnum, shortmsg);
   sprintf(body, "%s<p>%s: %s\r\n", body, longmsg, cause);
   sprintf(body, "%s<hr><em>The Tiny Web Server</em>\r\n", body);
@@ -188,11 +185,11 @@ void get_filetype(char *filename, char *filetype)
 {
   if (strstr(filename, ".html"))
     strcpy(filetype, "text/html"); //
-  else if (strtstr(filename, ".gif"))
+  else if (strstr(filename, ".gif"))
     strcpy(filetype, "image/gif");
-  else if (strtstr(filename, ".png"))
+  else if (strstr(filename, ".png"))
     strcpy(filetype, "image/png");
-  else if (strtstr(filename, ".jpg"))
+  else if (strstr(filename, ".jpg"))
     strcpy(filetype, "image/jpeg");
   else
     strcpy(filetype, "text/plain");
