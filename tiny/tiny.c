@@ -154,7 +154,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
       strcpy(cgiargs, "");
     }
     strcpy(filename, ".");
-    strcpy(filename, uri);
+    strcat(filename, uri);
     return 0;
   }
 }
