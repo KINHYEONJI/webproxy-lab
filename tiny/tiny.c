@@ -138,7 +138,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
     strcpy(filename, ".");
     strcat(filename, uri);
     if (uri[strlen(uri) - 1] == '/')
-      strcat(filename, "home.html");
+      strcat(filename, "cgi-bin/adder.html");
     return 1;
   }
   else // 동적파일일 경우
