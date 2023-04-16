@@ -19,7 +19,7 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 int main(int argc, char **argv) // argument count(인자 개수), argument vector(입력된 인자 배열)
 {
   // socket file descriptor 저장 변수
-  int listenfd, connfd;                  // listening socket, connection file descriptor
+  int listenfd, connfd;                  // listening file descriptor, connection file descriptor
   char hostname[MAXLINE], port[MAXLINE]; // client의 hostname과 port번호를 저장하는 변수
   socklen_t clientlen;
   struct sockaddr_storage clientaddr;
@@ -42,7 +42,7 @@ int main(int argc, char **argv) // argument count(인자 개수), argument vecto
   }
 }
 
-void doit(int fd) // fd는 client와 연결된 socekt file descriptor
+void doit(int fd) // fd는 client와 연결된 socekt file descriptor(connfd)
 {
   int is_static;
   struct stat sbuf;
@@ -54,7 +54,7 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor
   Rio_readlineb(&rio, buf, MAXLINE); // buf(함수가 rio에서 읽은 data를 저장할 buffer), MAXLINE(buf에 저장될 수 있는 최대 줄 수)
   printf("Request headers:\n");
   printf("%s", buf);
-  sscanf(buf, "%s %s %s", method, uri, version); // buf에서 http method, uri, version 정보를 추출
+  sscanf(buf, "%s %s %s", method, uri, version); // buf에서 http method, uri, version 정보를 추출, buf대신 &rio라고 하면 안됨(rio_t 구조체 전체를 대상으로 파싱을 시도하기 때문에 안됨)
 
   if (strcasecmp(method, "GET")) // GET method가 아닌 경우, error 호출 (구현하고 있는 tiny web server가 GET요청에만 응답할 수 있도록 구현되어있음)
   {
@@ -178,10 +178,20 @@ void serve_static(int fd, char *filename, int filesize)
 
   // file의 내용을 memory에 mapping하여 clinet에게 전송
   srcfd = Open(filename, O_RDONLY, 0);
-  srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
-  Close(srcfd);
-  Rio_writen(fd, srcp, filesize);
-  Munmap(srcp, filesize);
+  // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  // Close(srcfd);
+  // Rio_writen(fd, srcp, filesize);
+  // Munmap(srcp, filesize);
+
+  srcp = (char *)malloc(filesize);
+  if ((srcp = (char *)malloc(filesize)) != NULL) // memory할당 성공
+  {
+    if (Rio_readn(srcfd, srcp, filesize) == filesize) // file에서 data를 읽어오기를 성공
+    {
+      Rio_writen(fd, srcp, filesize); // 읽어온 data를 file discripor에 씀
+    }
+    free(srcp); // memory할당 해제
+  }
 }
 
 void get_filetype(char *filename, char *filetype)
