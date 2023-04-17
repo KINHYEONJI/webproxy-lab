@@ -11,9 +11,9 @@
 void doit(int fd);
 void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *filename, char *cgiargs);
-void serve_static(int fd, char *filename, int filesize);
+void serve_static(int fd, char *filename, int filesize, char *method);
 void get_filetype(char *filename, char *filetype);
-void serve_dynamic(int fd, char *filename, char *cgiargs);
+void serve_dynamic(int fd, char *filename, char *cgiargs, char *method);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 
 int main(int argc, char **argv) // argument count(인자 개수), argument vector(입력된 인자 배열)
@@ -56,7 +56,7 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor(connfd)
   printf("%s", buf);
   sscanf(buf, "%s %s %s", method, uri, version); // buf에서 http method, uri, version 정보를 추출, buf대신 &rio라고 하면 안됨(rio_t 구조체 전체를 대상으로 파싱을 시도하기 때문에 안됨)
 
-  if (strcasecmp(method, "GET")) // GET method가 아닌 경우, error 호출 (구현하고 있는 tiny web server가 GET요청에만 응답할 수 있도록 구현되어있음)
+  if (strcasecmp(method, "GET") && strcasecmp(method, "HEAD")) // GET 혹은 HEAD method가 아닌 경우, error 호출 (구현하고 있는 tiny web server가 GET, HEAD 요청에만 응답할 수 있도록 구현되어있음)
   {
     clienterror(fd, method, "501", "Not implemented", "Tiny does not implement this method");
     return;
@@ -79,7 +79,7 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor(connfd)
       clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't read the file");
       return;
     }
-    serve_static(fd, filename, sbuf.st_size); // 바로 client에게 전송
+    serve_static(fd, filename, sbuf.st_size, method); // 바로 client에게 전송
   }
   else // 동적 file일 경우
   {
@@ -88,7 +88,7 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor(connfd)
       clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't run the CGI program");
       return;
     }
-    serve_dynamic(fd, filename, cgiargs); // CGI program(server측 web programming 방식 중 하나)을 실행하여 결과를 생성해 client에게 전송
+    serve_dynamic(fd, filename, cgiargs, method); // CGI program(server측 web programming 방식 중 하나)을 실행하여 결과를 생성해 client에게 전송
   }
 }
 
@@ -159,7 +159,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
   }
 }
 
-void serve_static(int fd, char *filename, int filesize)
+void serve_static(int fd, char *filename, int filesize, char *method)
 {
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
@@ -182,6 +182,9 @@ void serve_static(int fd, char *filename, int filesize)
   // Close(srcfd);
   // Rio_writen(fd, srcp, filesize);
   // Munmap(srcp, filesize);
+
+  if (strcasecmp(method, "HEAD") == 0) // 요청이 HEAD일 경우 header정보만 전달하므로 return
+    return;
 
   srcp = (char *)malloc(filesize);
   if ((srcp = (char *)malloc(filesize)) != NULL) // memory할당 성공
@@ -208,7 +211,7 @@ void get_filetype(char *filename, char *filetype)
     strcpy(filetype, "text/plain");
 }
 
-void serve_dynamic(int fd, char *filename, char *cgiargs)
+void serve_dynamic(int fd, char *filename, char *cgiargs, char *method)
 {
   char buf[MAXLINE], *emptylist[] = {NULL};
 
@@ -220,6 +223,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs)
   if (Fork() == 0) // 자식 process만듦
   {
     setenv("QUERY_STRING", cgiargs, 1);   // CGI script에서 사용할 수 있는 QUERY_STRING 환경변수 설정
+    setenv("REQUEST_METHOD", method, 1);  // REQUEST_METHOD 환경변수에 http request method를 설정
     Dup2(fd, STDOUT_FILENO);              // 자식 process의 표준 출력을 client socket fd로 재지정
     Execve(filename, emptylist, environ); // CGI script file 실행
   }
