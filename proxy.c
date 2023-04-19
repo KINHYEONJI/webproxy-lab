@@ -10,6 +10,8 @@ static const char *user_agent_hdr =
     "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:10.0.3) Gecko/20120305 "
     "Firefox/10.0.3\r\n";
 
+void doit(int proxy_connfd);
+
 int main(int argc, char **argv)
 {
   int proxy_listenfd, proxy_connfd;
@@ -34,4 +36,30 @@ int main(int argc, char **argv)
     doit(proxy_connfd); // 주어진 임무(client의 요청)을 처리하는 핵심 함수
     Close(proxy_connfd);
   }
+}
+
+void doit(int proxy_connfd)
+{
+  int web_connfd;
+  struct stat sbuf;
+  char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
+  char hostname[MAXLINE], path[MAXLINE], port[MAXLINE];
+
+  rio_t rio;
+
+  Rio_readinitb(&rio, proxy_connfd); // rio를 proxy_connfd로 초기화
+  Rio_readlineb(&rio, buf, MAXLINE); // rio에 있는 string 한 줄, 한 줄을 buf로 다 옮김
+
+  printf("Request headers (Client -> Proxy) :\n");
+  printf("%s\n", buf);
+
+  sscanf(buf, "%s %s %s", method, uri, version); // buf의 첫 줄을 읽어드려 method, uri, version을 parsing
+
+  if (strcasecmp(method, "GET") && strcasecmp(method, "HEAD")) // method가 GET, HEAD가 아닐 경우 error
+  {
+    clienterror(proxy_connfd, method, "501", "Not implemented", "Tiny does not implement this method");
+    return;
+  }
+
+  parse_uri(uri, hostname, path, port); // uri에서 hostname, path, port parsing
 }
