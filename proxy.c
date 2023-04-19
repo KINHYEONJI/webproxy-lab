@@ -11,8 +11,8 @@ static const char *user_agent_hdr =
     "Firefox/10.0.3\r\n";
 
 void doit(int proxy_connfd);
-void parse_uri(char *uri, char *hostname, char *path, char *port);
-void print_parse_uri(char *hostname, char *path, char *port);
+void parse_uri(char *uri, char *hostname, char *path, int *port);
+void print_parse_uri(char *hostname, char *path, int port);
 void make_header(char *method, char *hostname, char *version, char *web_connfd, char *path);
 void read_response(int web_connfd, int proxy_connfd);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
@@ -64,10 +64,10 @@ void *thread_function(void *arg)
 
 void doit(int proxy_connfd)
 {
-  int web_connfd;
+  int web_connfd, port;
   struct stat sbuf;
   char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
-  char hostname[MAXLINE], path[MAXLINE], port[MAXLINE];
+  char hostname[MAXLINE], path[MAXLINE];
 
   rio_t rio;
 
@@ -85,11 +85,13 @@ void doit(int proxy_connfd)
     return;
   }
 
-  parse_uri(uri, hostname, path, port); // uri에서 hostname, path, port parsing
+  parse_uri(uri, hostname, path, &port); // uri에서 hostname, path, port parsing
 
   print_parse_uri(hostname, path, port);
 
-  web_connfd = Open_clientfd(hostname, port); // webserver와 연결할 proxy내의 socket open
+  char port_str[100];
+  sprintf(port_str, "%d", port);
+  web_connfd = Open_clientfd(hostname, port_str); // webserver와 연결할 proxy내의 socket open
 
   make_header(method, hostname, version, web_connfd, path); // web server에 전송할 http header 생성
 
@@ -97,11 +99,11 @@ void doit(int proxy_connfd)
   Close(web_connfd);                       // 역할이 끝난 web_connect socket을 닫음
 }
 
-void parse_uri(char *uri, char *hostname, char *path, char *port)
+void parse_uri(char *uri, char *hostname, char *path, int *port)
 {
   /* default webserver host, port */
   strcpy(hostname, "localhost");
-  strcpy(port, "8080");
+  *port = 8080;
 
   /* http:// 이후의 host:port/path parsing */
   char *pos = strstr(uri, "//");
@@ -112,7 +114,7 @@ void parse_uri(char *uri, char *hostname, char *path, char *port)
   if (pos2 != NULL) // port 번호를 포함하여 요청했다면
   {
     *pos2 = '\0';
-    sscanf(pos2 + 1, "%s%s", port, path);
+    sscanf(pos2 + 1, "%d%s", port, path);
   }
   else // port 번호가 없이 요청 왔다면
   {
@@ -126,11 +128,11 @@ void parse_uri(char *uri, char *hostname, char *path, char *port)
   return;
 }
 
-void print_parse_uri(char *hostname, char *path, char *port)
+void print_parse_uri(char *hostname, char *path, int port)
 {
   printf("HOSTNAME : %s\n", hostname);
   printf("PATH : %s\n", path);
-  printf("PORT : %s\n\n", port);
+  printf("PORT : %d\n\n", port);
 }
 
 void make_header(char *method, char *hostname, char *version, char *web_connfd, char *path)
