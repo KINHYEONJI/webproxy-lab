@@ -22,6 +22,7 @@ void *thread_function(void *arg);
 
 void cache_init();
 int cache_find(char *uri);
+void get_cache_lock(int index);
 
 typedef struct
 {
@@ -116,8 +117,9 @@ void doit(int proxy_connfd)
   strcpy(uri_copy, uri);
 
   int cache_index;
-  if ((cache_index = cache_find(uri)) != -1)
+  if ((cache_index = cache_find(uri)) != -1) // uri가 cache에 있는 경우
   {
+    get_cache_lock(cache_index); // 해당 uri의 cache block의 access lock 획득
   }
 
   parse_uri(uri, hostname, path, &port); // uri에서 hostname, path, port parsing
@@ -252,4 +254,15 @@ int cache_find(char *uri) // 요청 uri와 일치하는 uri를 가지고 있는 
     put_cache_lock(i);
   }
   return -1;
+}
+
+void get_cache_lock(int index) // cache block 접근 전 cache block access lock을 얻기 위한 함수
+{
+  P(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 획득
+
+  cache.cacheobjs[index].read_count++;        // read count 증가
+  if (cache.cacheobjs[index].read_count == 1) // 현재 thread만 읽는 중
+    P(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
+
+  V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 반환
 }
