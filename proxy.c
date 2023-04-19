@@ -20,6 +20,25 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 
 void *thread_function(void *arg);
 
+typedef struct
+{
+  char cache_obj[MAX_OBJECT_SIZE];
+  char cache_uri[MAXLINE];
+  int LRU;      // least recently used 가장 최근에 사용한 것의 우선순위를 뒤로 미움 (캐시에서 삭제할 때)
+  int is_empty; // 이 블럭에 캐시 정보가 들었는지 empty인지 아닌지 체크
+
+  int read_count;   // count of readers
+  sem_t wmutex;     // protects accesses to cache 세마포어 타입. 1: 사용가능, 0: 사용 불가능
+  sem_t rdcntmutex; // protects accesses to read_count
+} cache_block;      // 캐쉬블럭 구조체로 선언
+
+typedef struct
+{
+  cache_block cacheobjs[CACHE_SIZE]; // ten cache blocks
+} Cache;
+
+Cache cache;
+
 int main(int argc, char **argv)
 {
   // int proxy_listenfd, proxy_connfd,
