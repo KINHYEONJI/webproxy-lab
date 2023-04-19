@@ -98,7 +98,7 @@ void doit(int proxy_connfd)
   char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
   char hostname[MAXLINE], path[MAXLINE];
 
-  rio_t rio;
+  rio_t rio, server_rio;
 
   Rio_readinitb(&rio, proxy_connfd); // rio를 proxy_connfd로 초기화
   Rio_readlineb(&rio, buf, MAXLINE); // rio에 있는 string 한 줄, 한 줄을 buf로 다 옮김
@@ -136,8 +136,21 @@ void doit(int proxy_connfd)
 
   make_header(method, hostname, version, web_connfd, path); // web server에 전송할 http header 생성
 
-  read_response(web_connfd, proxy_connfd); // web server와 proxy server간의 응답을 읽어옴
-  Close(web_connfd);                       // 역할이 끝난 web_connect socket을 닫음
+  // read_response(web_connfd, proxy_connfd); // web server와 proxy server간의 응답을 읽어옴
+
+  char response_buf[MAX_OBJECT_SIZE];
+  int size_buf = 0;
+  size_t n;
+
+  while ((n = Rio_readlineb(&server_rio, buf, MAXLINE)) != 0) // web server의 응답을 한 줄 씩 읽어서 client에게 전달
+  {
+    size_buf += n;
+    if (size_buf < MAX_OBJECT_SIZE) // response_buf에 제한 두지 않고 계속 쓰다보면 buffer overflow 발생
+      strcat(response_buf, buf);
+    Rio_writen(proxy_connfd, buf, n);
+  }
+
+  Close(web_connfd); // 역할이 끝난 web_connect socket을 닫음
 }
 
 void parse_uri(char *uri, char *hostname, char *path, int *port)
