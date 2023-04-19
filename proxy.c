@@ -21,6 +21,7 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 void *thread_function(void *arg);
 
 void cache_init();
+int cache_find(char *uri);
 
 typedef struct
 {
@@ -109,6 +110,14 @@ void doit(int proxy_connfd)
   {
     clienterror(proxy_connfd, method, "501", "Not implemented", "Tiny does not implement this method");
     return;
+  }
+
+  char uri_copy[100];
+  strcpy(uri_copy, uri);
+
+  int cache_index;
+  if ((cache_index = cache_find(uri)) != -1)
+  {
   }
 
   parse_uri(uri, hostname, path, &port); // uri에서 hostname, path, port parsing
@@ -226,4 +235,21 @@ void cache_init() // 캐시 초기화
     Sem_init(&cache.cacheobjs[i].rdcntmutex, 0, 1); // 진입 가능한 자원 1개뿐이므로 binary semaphore
     cache.cacheobjs[i].read_count = 0;              // cache block read 동기화를 위한 변수 초기화
   }
+}
+
+int cache_find(char *uri) // 요청 uri와 일치하는 uri를 가지고 있는 cache block을 탐색하여 있다면 해당 block의 index 반환, 없다면 -1 반환
+{
+  printf("cache hit ! ====> %s", uri);
+  for (int i = 0; i < CACHE_SIZE; i++)
+  {
+    get_cache_lock(i);
+    /* cache block 이 empty 가 아니고, cache block에 있는 uri이 현재 요청 uri과 일치한다면 cache block의 index 반환 */
+    if (strcmp(uri, cache.cacheobjs[i].cache_uri) == 0)
+    {
+      put_cache_lock(i);
+      return i;
+    }
+    put_cache_lock(i);
+  }
+  return -1;
 }
