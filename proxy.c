@@ -151,6 +151,9 @@ void doit(int proxy_connfd)
   }
 
   Close(web_connfd); // 역할이 끝난 web_connect socket을 닫음
+
+  if (size_buf < MAX_OBJECT_SIZE) // 저장된 response_buf의 크기가 cache block에 저장될 수 있는 최대 크기보다 작을때만 caching
+    cache_uri(uri_copy, response_buf);
 }
 
 void parse_uri(char *uri, char *hostname, char *path, int *port)
