@@ -119,7 +119,8 @@ void doit(int proxy_connfd)
   int cache_index;
   if ((cache_index = cache_find(uri)) != -1) // uri가 cache에 있는 경우
   {
-    get_cache_lock(cache_index); // 해당 uri의 cache block의 access lock 획득
+    get_cache_lock(cache_index);                                                                                      // 해당 uri의 cache block의 access lock 획득
+    Rio_writen(proxy_connfd, cache.cacheobjs[cache_index].cache_obj, strlen(cache.cacheobjs[cache_index].cache_obj)); // cache에서 찾은 값을 proxy_connfd에 씀
   }
 
   parse_uri(uri, hostname, path, &port); // uri에서 hostname, path, port parsing
