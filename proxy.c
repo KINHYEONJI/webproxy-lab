@@ -23,6 +23,7 @@ void *thread_function(void *arg);
 void cache_init();
 int cache_find(char *uri);
 void get_cache_lock(int index);
+void put_cache_lock(int index);
 
 typedef struct
 {
@@ -121,6 +122,8 @@ void doit(int proxy_connfd)
   {
     get_cache_lock(cache_index);                                                                                      // 해당 uri의 cache block의 access lock 획득
     Rio_writen(proxy_connfd, cache.cacheobjs[cache_index].cache_obj, strlen(cache.cacheobjs[cache_index].cache_obj)); // cache에서 찾은 값을 proxy_connfd에 씀
+    put_cache_lock(cache_index);                                                                                      // 닫아줌 1->0 doit 끝
+    return;
   }
 
   parse_uri(uri, hostname, path, &port); // uri에서 hostname, path, port parsing
@@ -266,4 +269,15 @@ void get_cache_lock(int index) // cache block 접근 전 cache block access lock
     P(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
 
   V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 반환
+}
+
+void put_cache_lock(int index) // cache block 접근 이후 cache block access lock을 반환하기 위한 함수
+{
+  P(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 획득
+
+  cache.cacheobjs[index].read_count--;        // read count 감소
+  if (cache.cacheobjs[index].read_count == 0) // 현재 thread만 읽는 중
+    V(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
+
+  V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 획득
 }
