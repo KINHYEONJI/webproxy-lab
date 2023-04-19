@@ -66,6 +66,8 @@ void doit(int proxy_connfd)
   parse_uri(uri, hostname, path, port); // uri에서 hostname, path, port parsing
 
   print_parse_uri(hostname, path, port);
+
+  web_connfd = Open_clientfd(hostname, port); // webserver와 연결할 proxy내의 socket open
 }
 
 void parse_uri(char *uri, char *hostname, char *path, char *port)
