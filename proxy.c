@@ -281,24 +281,14 @@ int cache_find(char *uri) // 요청 uri와 일치하는 uri를 가지고 있는 
 
 void get_cache_lock(int index) // cache block 접근 전 cache block access lock을 얻기 위한 함수
 {
-  P(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 획득
 
-  cache.cacheobjs[index].read_count++;        // read count 증가
-  if (cache.cacheobjs[index].read_count == 1) // 현재 thread만 읽는 중
-    P(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
-
-  V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 반환
+  P(&cache.cacheobjs[index].wmutex); // cache block에 대한 write lock 획득
 }
 
 void put_cache_lock(int index) // cache block 접근 이후 cache block access lock을 반환하기 위한 함수
 {
-  P(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 획득
 
-  cache.cacheobjs[index].read_count--;        // read count 감소
-  if (cache.cacheobjs[index].read_count == 0) // 현재 thread만 읽는 중
-    V(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
-
-  V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 반환
+  V(&cache.cacheobjs[index].wmutex); // cache block에 대한 write lock 획득
 }
 
 int cache_eviction() // LRU 알고리즘에 따라 최소 LRU 값을 갖는 cache block의 index 찾아 반환
