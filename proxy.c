@@ -25,6 +25,7 @@ int cache_find(char *uri);
 void get_cache_lock(int index);
 void put_cache_lock(int index);
 int cache_eviction();
+void cache_LRU(int index);
 void cache_uri(char *uri, char *response_buf);
 
 typedef struct
@@ -322,6 +323,22 @@ int cache_eviction() // LRU 알고리즘에 따라 최소 LRU 값을 갖는 cach
     put_cache_lock(i);
   }
   return minindex;
+}
+
+void cache_LRU(int index) // index에 해당하는 cache block을 제외한 나머지 cache block들의 LRU 값을 낮춤
+{
+  for (int i = 0; i < CACHE_SIZE; i++)
+  {
+    if (i == index)
+      continue;
+
+    P(&cache.cacheobjs[i].wmutex); // cache block 쓰기 lock 획득
+
+    if (cache.cacheobjs[i].is_empty == 0)
+      cache.cacheobjs[i].LRU--; // 최근 캐싱된 cache block을 제외한 나머지 cache block LRU 값을 감소 시킴
+
+    V(&cache.cacheobjs[i].wmutex); // cache block 쓰기 lock 반환
+  }
 }
 
 void cache_uri(char *uri, char *response_buf) // empty cache block에 uri 캐싱
