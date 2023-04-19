@@ -13,6 +13,7 @@ static const char *user_agent_hdr =
 void doit(int proxy_connfd);
 void parse_uri(char *uri, char *hostname, char *path, char *port);
 void print_parse_uri(char *hostname, char *path, char *port);
+void make_header(char *method, char *hostname, char *version, char *web_connfd, char *path);
 
 int main(int argc, char **argv)
 {
@@ -68,6 +69,8 @@ void doit(int proxy_connfd)
   print_parse_uri(hostname, path, port);
 
   web_connfd = Open_clientfd(hostname, port); // webserver와 연결할 proxy내의 socket open
+
+  make_header(method, hostname, version, web_connfd, path); // web server에 전송할 http header 생성
 }
 
 void parse_uri(char *uri, char *hostname, char *path, char *port)
@@ -104,4 +107,19 @@ void print_parse_uri(char *hostname, char *path, char *port)
   printf("HOSTNAME : %s\n", hostname);
   printf("PATH : %s\n", path);
   printf("PORT : %s\n\n", port);
+}
+
+void make_header(char *method, char *hostname, char *version, char *web_connfd, char *path)
+{
+  char buf[MAXLINE];
+
+  sprintf(buf, "%s %s %s\r\n", method, path, "HTTP/1.0");
+  sprintf(buf, "%sHost: %s\r\n", buf, hostname);
+  sprintf(buf, "%s%s", buf, user_agent_hdr);
+  sprintf(buf, "%sConnection: %s\r\n", buf, "close");
+  sprintf(buf, "%sProxy-Connection: %s\r\n\r\n", buf, "close");
+
+  printf("Request Header (Proxy Server -> Web Server)\n");
+  printf("\n%s", buf);
+  Rio_writen(web_connfd, buf, strlen(buf));
 }
