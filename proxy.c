@@ -145,6 +145,8 @@ void doit(int proxy_connfd)
   int size_buf = 0;
   size_t n;
 
+  Rio_readinitb(&server_rio, web_connfd);
+
   while ((n = Rio_readlineb(&server_rio, buf, MAXLINE)) != 0) // web server의 응답을 한 줄 씩 읽어서 client에게 전달
   {
     size_buf += n;
@@ -207,6 +209,7 @@ void make_header(char *method, char *hostname, char *version, char *web_connfd, 
 
   printf("Request Header (Proxy Server -> Web Server)\n");
   printf("\n%s", buf);
+
   Rio_writen(web_connfd, buf, strlen(buf));
 }
 
