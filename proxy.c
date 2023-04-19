@@ -24,6 +24,7 @@ void cache_init();
 int cache_find(char *uri);
 void get_cache_lock(int index);
 void put_cache_lock(int index);
+void cache_uri(char *uri, char *response_buf);
 
 typedef struct
 {
@@ -296,4 +297,19 @@ void put_cache_lock(int index) // cache block 접근 이후 cache block access l
     V(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
 
   V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 반환
+}
+
+void cache_uri(char *uri, char *response_buf) // empty cache block에 uri 캐싱
+{
+  int index = cache_eviction(); // 빈 cache block 중 첫 번째 cache block index
+
+  P(&cache.cacheobjs[index].wmutex); // cache block 쓰기 lock 획득
+
+  strcpy(cache.cacheobjs[index].cache_obj, response_buf); // 웹 서버 응답 값을 cache block에 저장
+  strcpy(cache.cacheobjs[index].cache_uri, uri);          // 클라이언트의 요청 uri를 cache block에 저장
+  cache.cacheobjs[index].is_empty = 0;                    // cache block이 할당 되었으므로 0으로 변경
+  cache.cacheobjs[index].LRU = CACHE_SIZE;                // 가장 최근 caching 되었으므로, 가장 큰 값 부여
+  cache_LRU(index);                                       // 기존 나머지 cache block들의 LRU 값을 낮추어서 eviction 우선 순위를 높임
+
+  V(&cache.cacheobjs[index].wmutex); // cache block 쓰기 lock 반환
 }
