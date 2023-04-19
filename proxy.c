@@ -74,6 +74,7 @@ void doit(int proxy_connfd)
   make_header(method, hostname, version, web_connfd, path); // web server에 전송할 http header 생성
 
   read_response(web_connfd, proxy_connfd); // web server와 proxy server간의 응답을 읽어옴
+  Close(web_connfd);                       // 역할이 끝난 web_connect socket을 닫음
 }
 
 void parse_uri(char *uri, char *hostname, char *path, char *port)
