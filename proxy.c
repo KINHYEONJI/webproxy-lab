@@ -12,6 +12,7 @@ static const char *user_agent_hdr =
 
 void doit(int proxy_connfd);
 void parse_uri(char *uri, char *hostname, char *path, char *port);
+void print_parse_uri(char *hostname, char *path, char *port);
 
 int main(int argc, char **argv)
 {
@@ -63,6 +64,8 @@ void doit(int proxy_connfd)
   }
 
   parse_uri(uri, hostname, path, port); // uri에서 hostname, path, port parsing
+
+  print_parse_uri(hostname, path, port);
 }
 
 void parse_uri(char *uri, char *hostname, char *path, char *port)
@@ -92,4 +95,11 @@ void parse_uri(char *uri, char *hostname, char *path, char *port)
   }
 
   return;
+}
+
+void print_parse_uri(char *hostname, char *path, char *port)
+{
+  printf("HOSTNAME : %s\n", hostname);
+  printf("PATH : %s\n", path);
+  printf("PORT : %s\n\n", port);
 }
