@@ -36,7 +36,7 @@ int main(int argc, char **argv) // argument count(인자 개수), argument vecto
     clientlen = sizeof(clientaddr);
     connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); // 새로운 socke file descriptor 반환
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
-    printf("Accepted connection from (%s, %s)\n", hostname, port);
+    printf("(Server) Accepted connection from (%s, %s)\n", hostname, port);
     doit(connfd);  // client와의 통신을 처리
     Close(connfd); // client와의 연결을 종료, socket file descriptor(connfd) 닫음.
   }
@@ -52,7 +52,7 @@ void doit(int fd) // fd는 client와 연결된 socekt file descriptor(connfd)
 
   Rio_readinitb(&rio, fd);           // rio 초기화
   Rio_readlineb(&rio, buf, MAXLINE); // buf(함수가 rio에서 읽은 data를 저장할 buffer), MAXLINE(buf에 저장될 수 있는 최대 줄 수)
-  printf("Request headers:\n");
+  printf("Request headers (Proxy -> Server) :\n");
   printf("%s", buf);
   sscanf(buf, "%s %s %s", method, uri, version); // buf에서 http method, uri, version 정보를 추출, buf대신 &rio라고 하면 안됨(rio_t 구조체 전체를 대상으로 파싱을 시도하기 때문에 안됨)
 
@@ -172,8 +172,8 @@ void serve_static(int fd, char *filename, int filesize, char *method)
   sprintf(buf, "%sConnection: close\r\n", buf);
   sprintf(buf, "%sContent-length: %d\r\n", buf, filesize);
   sprintf(buf, "%sContent-type: %s\r\n\r\n", buf, filetype);
-  Rio_writen(fd, buf, strlen(buf)); // client에게 response header 전송
-  printf("Response headers:\n");    // server측에서도 header 정보를 출력
+  Rio_writen(fd, buf, strlen(buf));                 // client에게 response header 전송
+  printf("Response headers (Server -> Proxy) :\n"); // server측에서도 header 정보를 출력
   printf("%s", buf);
 
   // file의 내용을 memory에 mapping하여 clinet에게 전송
