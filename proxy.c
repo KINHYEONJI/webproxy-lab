@@ -11,6 +11,7 @@ static const char *user_agent_hdr =
     "Firefox/10.0.3\r\n";
 
 void doit(int proxy_connfd);
+void parse_uri(char *uri, char *hostname, char *path, char *port);
 
 int main(int argc, char **argv)
 {
@@ -62,4 +63,33 @@ void doit(int proxy_connfd)
   }
 
   parse_uri(uri, hostname, path, port); // uri에서 hostname, path, port parsing
+}
+
+void parse_uri(char *uri, char *hostname, char *path, char *port)
+{
+  /* default webserver host, port */
+  strcpy(hostname, "localhost");
+  strcpy(port, "8080");
+
+  /* http:// 이후의 host:port/path parsing */
+  char *pos = strstr(uri, "//");
+  pos = pos != NULL ? pos + 2 : uri;
+
+  char *pos2 = strstr(pos, ":"); // host: 이후의 port/path parsing
+
+  if (pos2 != NULL) // port 번호를 포함하여 요청했다면
+  {
+    *pos2 = '\0';
+    sscanf(pos2 + 1, "%s%s", port, path);
+  }
+  else // port 번호가 없이 요청 왔다면
+  {
+    pos2 = strstr(pos, "/");
+    if (pos2 != NULL) // path를 통해 특정 자원에 대한 요청이 있을 경우
+    {
+      sscanf(pos2, "%s", path); // pos2 위치의 문자열을 path에 저장함
+    }
+  }
+
+  return;
 }
