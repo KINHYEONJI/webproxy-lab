@@ -103,7 +103,6 @@ void doit(int proxy_connfd)
 
   sscanf(buf, "%s %s %s", method, uri, version); // buf의 첫 줄을 읽어드려 method, uri, version을 parsing
 
-  printf("URI --------- %s\n", uri);
   if (strcasecmp(method, "GET") && strcasecmp(method, "HEAD")) // method가 GET, HEAD가 아닐 경우 error
   {
     clienterror(proxy_connfd, method, "501", "Not implemented", "Tiny does not implement this method");
