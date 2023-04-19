@@ -20,6 +20,8 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 
 void *thread_function(void *arg);
 
+void cache_init();
+
 typedef struct
 {
   char cache_obj[MAX_OBJECT_SIZE];
@@ -48,6 +50,8 @@ int main(int argc, char **argv)
   struct sockaddr_storage clientaddr;
 
   pthread_t tid;
+
+  cache_init(); // 캐시 초기화
 
   if (argc != 2)
   {
@@ -206,4 +210,19 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
   sprintf(buf, "Content-length: %d\r\n\r\n", (int)strlen(body));
   Rio_writen(fd, buf, strlen(buf));
   Rio_writen(fd, body, strlen(body));
+}
+
+void cache_init() // 캐시 초기화
+{
+  for (int i = 0; i < CACHE_SIZE; i++)
+  {
+    cache.cacheobjs[i].LRU = 0;      // 아직 캐싱된 데이터 없으므로 0, 최근에 할당 된 cache block 일 수록 높은 값을 가짐
+    cache.cacheobjs[i].is_empty = 1; // 아직 캐싱된 데이터 없으므로 1
+
+    /* 두번째 파라미터 -> 1이면 process shared, 0이면 thread shared
+    세번째 파라미터 -> 세마포어 초기값 1(액세스 가능)*/
+    Sem_init(&cache.cacheobjs[i].wmutex, 0, 1);     // 진입 가능한 자원 1개뿐이므로 binary semaphore
+    Sem_init(&cache.cacheobjs[i].rdcntmutex, 0, 1); // 진입 가능한 자원 1개뿐이므로 binary semaphore
+    cache.cacheobjs[i].read_count = 0;              // cache block read 동기화를 위한 변수 초기화
+  }
 }
