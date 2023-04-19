@@ -14,6 +14,7 @@ void doit(int proxy_connfd);
 void parse_uri(char *uri, char *hostname, char *path, char *port);
 void print_parse_uri(char *hostname, char *path, char *port);
 void make_header(char *method, char *hostname, char *version, char *web_connfd, char *path);
+void read_response(int web_connfd, int proxy_connfd);
 
 int main(int argc, char **argv)
 {
@@ -71,6 +72,8 @@ void doit(int proxy_connfd)
   web_connfd = Open_clientfd(hostname, port); // webserver와 연결할 proxy내의 socket open
 
   make_header(method, hostname, version, web_connfd, path); // web server에 전송할 http header 생성
+
+  read_response(web_connfd, proxy_connfd); // web server와 proxy server간의 응답을 읽어옴
 }
 
 void parse_uri(char *uri, char *hostname, char *path, char *port)
@@ -122,4 +125,20 @@ void make_header(char *method, char *hostname, char *version, char *web_connfd, 
   printf("Request Header (Proxy Server -> Web Server)\n");
   printf("\n%s", buf);
   Rio_writen(web_connfd, buf, strlen(buf));
+}
+
+void read_response(int web_connfd, int proxy_connfd)
+{
+  char buf[MAXLINE];
+  rio_t serve_rio;
+
+  Rio_readinitb(&serve_rio, web_connfd);
+
+  printf("Response header (Web Server -> Proxy Server)\n");
+  int size = 0;
+  while ((size = Rio_readnb(&serve_rio, buf, MAXLINE)) > 0)
+  {
+    printf("%s", buf);
+    Rio_writen(proxy_connfd, buf, size);
+  }
 }
