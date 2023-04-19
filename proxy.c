@@ -17,12 +17,17 @@ void make_header(char *method, char *hostname, char *version, char *web_connfd, 
 void read_response(int web_connfd, int proxy_connfd);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 
+void *thread_function(void *arg);
+
 int main(int argc, char **argv)
 {
-  int proxy_listenfd, proxy_connfd;
+  // int proxy_listenfd, proxy_connfd,
+  int proxy_listenfd, *proxy_connfd_ptr;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
   struct sockaddr_storage clientaddr;
+
+  pthread_t tid;
 
   if (argc != 2)
   {
@@ -35,11 +40,15 @@ int main(int argc, char **argv)
   while (1)
   {
     clientlen = sizeof(clientaddr);
-    proxy_connfd = Accept(proxy_listenfd, (SA *)&clientaddr, &clientlen);           // connect fd를 생성
+    // proxy_connfd = Accept(proxy_listenfd, (SA *)&clientaddr, &clientlen);           // connect fd를 생성
+    proxy_connfd_ptr = (int *)malloc(sizeof(int));
+    *proxy_connfd_ptr = Accept(proxy_listenfd, (SA *)&clientaddr, &clientlen);
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0); // clientaddr, clientlen을 받아서 hostname으로 변환
     printf("(Proxy) Accepted connection from (%s %s)\n\n", hostname, port);
-    doit(proxy_connfd); // 주어진 임무(client의 요청)을 처리하는 핵심 함수
-    Close(proxy_connfd);
+
+    Pthread_create(&tid, NULL, thread_function, proxy_connfd_ptr); // 생성된 Thread의 id를 저장할 변수의 주소, 스레드의 속성(NULL이 기본), 새로 생성된 thread에서 실행할 함수 포인터, thread_function에 전달될 인자
+    // doit(proxy_connfd); // 주어진 임무(client의 요청)을 처리하는 핵심 함수
+    // Close(proxy_connfd);
   }
 }
 
