@@ -279,5 +279,5 @@ void put_cache_lock(int index) // cache block 접근 이후 cache block access l
   if (cache.cacheobjs[index].read_count == 0) // 현재 thread만 읽는 중
     V(&cache.cacheobjs[index].wmutex);        // cache block에 대한 write lock 획득
 
-  V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 획득
+  V(&cache.cacheobjs[index].rdcntmutex); // reader count 값 변경에 대한 lock 반환
 }
