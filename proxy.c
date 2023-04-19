@@ -59,6 +59,8 @@ int main(int argc, char **argv)
     exit(1);
   }
 
+  Signal(SIGPIPE, SIG_IGN); // SIGPIPE 시그널을 무시하도록 설정해, 데이터 전송 시 연결이 끊어지더라도 프로세스가 종료되지 않고 계속 실행되도록 함
+
   proxy_listenfd = Open_listenfd(argv[1]); // listen socket을 열어 client의 요청을 들을 준비를 함
 
   while (1)
