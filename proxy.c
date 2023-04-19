@@ -15,6 +15,7 @@ void parse_uri(char *uri, char *hostname, char *path, char *port);
 void print_parse_uri(char *hostname, char *path, char *port);
 void make_header(char *method, char *hostname, char *version, char *web_connfd, char *path);
 void read_response(int web_connfd, int proxy_connfd);
+void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 
 int main(int argc, char **argv)
 {
@@ -142,4 +143,25 @@ void read_response(int web_connfd, int proxy_connfd)
     printf("%s", buf);
     Rio_writen(proxy_connfd, buf, size);
   }
+}
+
+void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg) // client와 연결된 socket fd, error의 원인을, 에러코드, 에러의 간랸한 설명, 에러의 자세한 설명
+{
+  char buf[MAXLINE], body[MAXBUF];
+
+  // body에 HTML 형식의 error page 생성
+  sprintf(body, "<html><title>Tiny Error</title>");
+  sprintf(body, "%s<body bgcolor='ffffff'>\r\n", body);
+  sprintf(body, "%s%s: %s\r\n", body, errnum, shortmsg);
+  sprintf(body, "%s<p>%s: %s\r\n", body, longmsg, cause);
+  sprintf(body, "%s<hr><em>The Tiny Web Server</em>\r\n", body);
+
+  // buf(문자열)에 HTTP 응답 header 생성
+  sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
+  Rio_writen(fd, buf, strlen(buf));
+  sprintf(buf, "Content-type: text/html\r\n");
+  Rio_writen(fd, buf, strlen(buf));
+  sprintf(buf, "Content-length: %d\r\n\r\n", (int)strlen(body));
+  Rio_writen(fd, buf, strlen(buf));
+  Rio_writen(fd, body, strlen(body));
 }
