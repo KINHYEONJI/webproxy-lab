@@ -52,6 +52,16 @@ int main(int argc, char **argv)
   }
 }
 
+void *thread_function(void *arg)
+{
+  Pthread_detach(Pthread_self());
+
+  int connfd = *((int *)arg); // 인자로 전달된 proxy_connfd_ptr을 새로운 connfd에 할당
+  Free(arg);                  // 인자로 전달된 proxy_connfd_ptr해제
+  doit(connfd);
+  Close(connfd);
+}
+
 void doit(int proxy_connfd)
 {
   int web_connfd;
