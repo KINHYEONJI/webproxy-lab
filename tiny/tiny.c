@@ -15,14 +15,17 @@ void serve_static(int fd, char *filename, int filesize, char *method);
 void get_filetype(char *filename, char *filetype);
 void serve_dynamic(int fd, char *filename, char *cgiargs, char *method);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
+void thread_function(void *arg);
 
 int main(int argc, char **argv) // argument count(인자 개수), argument vector(입력된 인자 배열)
 {
   // socket file descriptor 저장 변수
-  int listenfd, connfd;                  // listening file descriptor, connection file descriptor
+  int listenfd, connfd; // listening file descriptor, connection file descriptor
+  int *connfd_ptr;
   char hostname[MAXLINE], port[MAXLINE]; // client의 hostname과 port번호를 저장하는 변수
   socklen_t clientlen;
   struct sockaddr_storage clientaddr;
+  pthread_t tid;
 
   if (argc != 2) // command line에서 입력된 인자가 2개가 아닐시에 오류 메세지 출력 후 시스템 종료
   {
@@ -34,12 +37,27 @@ int main(int argc, char **argv) // argument count(인자 개수), argument vecto
   while (1)                          // close될 때까지 client의 연결 요청을 수락
   {
     clientlen = sizeof(clientaddr);
-    connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); // 새로운 socke file descriptor 반환
+    // connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); // 새로운 socke file descriptor 반환
+    connfd_ptr = (int *)malloc(sizeof(int));
+    *connfd_ptr = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
     printf("(Server) Accepted connection from (%s, %s)\n", hostname, port);
-    doit(connfd);  // client와의 통신을 처리
-    Close(connfd); // client와의 연결을 종료, socket file descriptor(connfd) 닫음.
+    // doit(connfd);  // client와의 통신을 처리
+    // Close(connfd); // client와의 연결을 종료, socket file descriptor(connfd) 닫음.
+
+    pthread_create(&tid, NULL, thread_function, connfd_ptr);
   }
+}
+
+void thread_function(void *arg)
+{
+  pthread_detach(pthread_self());
+  int connfd = *((int *)arg);
+  free(arg);
+  doit(connfd);
+  Close(connfd);
+  pthread_exit(NULL);
 }
 
 void doit(int fd) // fd는 client와 연결된 socekt file descriptor(connfd)
